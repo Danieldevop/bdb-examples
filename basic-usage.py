@@ -35,14 +35,44 @@ sent_creation_tx = bdb.transactions.send_commit(fulfilled_creation_tx)
 
 txid = fulfilled_creation_tx['id']
 
-print('Transaction Id:{}'.format(txid))
 
-block_height = bdb.blocks.get(txid=txid)
+asset_id = txid
 
-print(block_height)
+transfer_asset = {
+    'id': asset_id
+}
 
-block = bdb.blocks.retrieve(str(block_height))
+output_index = 0
+output = fulfilled_creation_tx['outputs'][output_index]
 
-print(block)
+transfer_input = {
+    'fulfillment': output['condition']['details'],
+    'fulfills': {
+        'output_index': output_index,
+        'transaction_id': fulfilled_creation_tx['id']
+    },
+    'owners_before': output['public_keys']
+}
+
+prepared_transfer_tx = bdb.transactions.prepare(
+    operation='TRANSFER',
+    asset=transfer_asset,
+    inputs=transfer_input,
+    recipients=antonio.public_key,
+)
+
+fulfilled_transfer_tx = bdb.transactions.fulfill(
+    prepared_transfer_tx,
+    private_keys=daniel.private_key,
+)
 
 
+sent_transfer_tx = bdb.transactions.send_commit(fulfilled_transfer_tx)
+
+print("Is Antonio the owner?",
+    sent_transfer_tx['outputs'][0]['public_keys'][0] == antonio.public_key)
+
+print("transfer ID: {}".format(fulfilled_transfer_tx['id']))
+
+print("Was Daniel the previous owner?",
+    fulfilled_transfer_tx['inputs'][0]['owners_before'][0] == daniel.public_key)
